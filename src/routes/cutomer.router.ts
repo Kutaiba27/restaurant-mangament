@@ -7,7 +7,8 @@ import {
    requestOpt,
    getCustomerProfile,
    editCusomerProfile,
-   createPaymet
+   createPaymet,
+   webHook
 } from '../controllers/cutomer.controller'
 import { Authorization } from "../middlewares/auth.middleware";
 
@@ -17,6 +18,7 @@ const router:Router = Router();
 
 router.post('/singin',customerSingIn)
 router.post('/login',customerLogIn)
+router.post('/web-hook',webHook)
 router.use(Authorization)
 router.patch('/verify',customerVerify)
 router.get('/otp',requestOpt)

@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Request, Response, NextFunction } from "express"
-import CreateVindorDto, { VindorLoginDto } from "../dto/vindor.dto"
 import {VindorModel, VindorDoc} from "../model/vindor.model"
-import { GeneratePassword, GenerateSult, VirfyPassword } from "../utility/PasswordUtility"
+import { GeneratePassword, GenerateSult } from "../utility/PasswordUtility"
 import {CustomerDoc, CustomerModel} from "../model/customer.model";
 import {FoodDoc, FoodModel} from "../model/food.model";
+import { CreateVindorDto } from "../dto/vindor.dto";
+
 
 export const findVindor = async (id: string | undefined, email?: string) => {
    if (email) {
@@ -17,16 +18,14 @@ export const findVindor = async (id: string | undefined, email?: string) => {
 export const findCustomer = async (id:string):Promise<CustomerDoc>=>{
    return await CustomerModel.findById(id) as CustomerDoc
 }
+
 export const findFood = async (id:string):Promise<FoodDoc>=>{
    return await FoodModel.findById(id) as FoodDoc
 }
 
    export const createVinder = async (req: Request, res: Response, next: NextFunction) => {
-
    const { name, ownerName, email, password, phone, foodType, pincode } = <CreateVindorDto>req.body
-
    const vindor:VindorDoc = await findVindor('',email)
-
    if (vindor) {
       return res.json({message:"the vindor is existing wiht the email"})
    }

@@ -1,13 +1,20 @@
 import {Request,Response,NextFunction} from "express";
 import {CartDoc, CartModel} from "../model/cart.model";
 import {CustomerDoc, CustomerModel} from "../model/customer.model";
-import {ApiError} from "../utility/apierror";
-import {CartInput} from "../dto/cart.dto";
+import {CartInputDto} from "../dto/cart.dto";
 import {FoodDoc, FoodModel} from "../model/food.model";
+import { ApiError } from "../utility/error/apierror";
+import { plainToInstance } from "class-transformer";
+import { ValidationError, validate } from "class-validator";
 
 export const addItemToCart = async (req:Request,res:Response,next:NextFunction)=>{
    try{
-      const cartInfo:CartInput = <CartInput>req.body;
+      const cartInfo = <CartInputDto>req.body;
+      const instanc = plainToInstance(CartInputDto,req.body)
+      const inputError: ValidationError[] = await validate(instanc, { validationError: { target: true } })
+      if (inputError.length > 0) {
+         return res.status(400).json({ message: inputError })
+      }
       let totalPrice:number = 0.0;
       const customer:CustomerDoc = await CustomerModel.findById(req.user?._id as string).populate('cart') as CustomerDoc;
       if(customer.cart){

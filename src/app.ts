@@ -7,8 +7,8 @@ import 'reflect-metadata'
 import { dbConnection} from "./configurations/db.connection";
 import { AdminRouter }  from './routes/admin.router'
 import { VindorRouter }  from './routes/vindor.router'
-import {ApiError} from "./utility/apierror";
-import {globalError} from "./middlewares/error.middleware";
+import {ApiError} from "./utility/error/apierror";
+import {globalError} from "./utility/error/globalError";
 import {ShoppingRouter} from "./routes/shopping.router";
 import {CustomerRouter} from "./routes/cutomer.router";
 import {CartRouter} from "./routes/cart.router";
@@ -26,15 +26,16 @@ app.use('/admin', AdminRouter)
 app.use('/vindor', VindorRouter)
 app.use('/customer',CustomerRouter)
 app.use('/cart',CartRouter)
-app.use('/order', OrderRouter)
 app.use(ShoppingRouter)
+app.use('/order', OrderRouter)
 
 
 app.use('*',(req:Request,res:Response,next:NextFunction)=>{
-   next(new ApiError("the route not found",404))
+   next(new ApiError("the route not founssssssssd",404))
 })
 
 app.use(globalError)
+
 dbConnection.then(()=>{
    app.listen(process.env.PORT,()=>{
       console.log(`the server is running ${process.env.PORT}`)

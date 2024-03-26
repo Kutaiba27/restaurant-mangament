@@ -10,7 +10,6 @@ export const GenerateOtp = ()=>{
 export const onRequestOtp = async (otp:number, toPhoneNumber:string)=>{
    const accountId = process.env.TWILIO_SID
    const token= process.env.TWILIO_AUTH_TOKEN
-   // const verifySid =process.env.TWILIO_VERIFY_SID as string
    const client = twilio(accountId,token) 
    console.log(toPhoneNumber)
    const respons = await client.messages.create({

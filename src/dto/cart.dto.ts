@@ -1,5 +1,9 @@
+import { IsMongoId, IsNumber } from 'class-validator'
+export class CartInputDto {
 
-export interface CartInput {
-   id:string;
-   unit:number;
+   @IsMongoId()
+   id: string;
+
+   @IsNumber()
+   unit: number;
 }

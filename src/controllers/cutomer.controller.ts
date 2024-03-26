@@ -1,23 +1,19 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Request, Response, NextFunction } from "express";
 import { plainToInstance } from "class-transformer";
-import { CreateCustomerDto, CustomerPayload, EditCustomerDto, LoginCustomer } from "../dto/customer.dto";
+import Stripe from "stripe";
 import { validate, ValidationError } from "class-validator";
+import { CreateCustomerDto, CustomerPayload, EditCustomerDto, LoginCustomer } from "../dto/customer.dto";
 import { CustomerDoc, CustomerModel } from "../model/customer.model";
 import { GenerateOtp, onRequestOtp } from "../utility/notification";
 import { GeneratePassword, GenerateSult, VirfyPassword } from "../utility/PasswordUtility";
 import { OrderDoc, OrderModel } from "../model/order.model";
 import { GeneratSignature } from "../utility/JWTUtility";
-import Stripe from "stripe";
-import { TransactionModel } from "../model/transaction.model";
+import validationDTO from "../utility/validationDto";
 
 export const customerSingIn = async (req: Request, res: Response, next: NextFunction) => {
    try {
-      const customerInput: CreateCustomerDto = plainToInstance(CreateCustomerDto, req.body)
-      const inputError: ValidationError[] = await validate(customerInput, { validationError: { target: true } })
-      if (inputError.length > 0) {
-         return res.status(400).json({ message: inputError })
-      }
+      const customerInput: CreateCustomerDto = await validationDTO<CreateCustomerDto>(CreateCustomerDto,req) 
       const customerExisting: CustomerDoc | null = await CustomerModel.findOne({ email: customerInput.email })
       if (customerExisting) return res.status(400).json({ message: " the user regestier with previes email" })
       const { otp, expire } = GenerateOtp()
@@ -40,9 +36,9 @@ export const customerSingIn = async (req: Request, res: Response, next: NextFunc
       next(error)
    }
 }
-export const customerLogIn = async (req: Request, res: Response, next: NextFunction) => {
+export const customerLogIn = async (req: Request, res: Response) => {
    try {
-      const customerInput: LoginCustomer = plainToInstance(LoginCustomer, req.body)
+      const customerInput:LoginCustomer = await validationDTO<LoginCustomer>(LoginCustomer,req) 
       const customer: CustomerDoc | null = await CustomerModel.findOne({ email: customerInput.email })
       if (!customer) return res.status(404).json({ message: "the customer not found" })
       const valitdatePasswrod: boolean = VirfyPassword(customerInput.password, customer.password)
@@ -56,7 +52,10 @@ export const customerLogIn = async (req: Request, res: Response, next: NextFunct
       res.cookie("token", token)
       return res.status(200).json({ message: "login successfully",token })
    } catch (e) {
-      res.status(400).json({ message: "there are something wrong" })
+      if( e instanceof ValidationError) {
+         return res.status(500).json({ message:e})
+      }
+      res.status(400).json({ message: e })
    }
 }
 export const customerVerify = async (req: Request, res: Response, next: NextFunction) => {
@@ -118,7 +117,7 @@ export const editCusomerProfile = async (req: Request, res: Response, next: Next
          { new: true })
       return res.status(201).json({ message: "updated successfully", data: updateCustomer })
    } catch (e) {
-      return res.status(500).json({ message: e })
+      next(e)
    }
 }
 
@@ -126,7 +125,7 @@ export const createPaymet = async (req: Request, res: Response, next: NextFuncti
    const order = await OrderModel.findById(req.params.orderId).populate('cart') as OrderDoc
    const applicationFeePercentage = 5;
    const applicationFeeAmount = Math.round(order?.totalPrice * (applicationFeePercentage / 100));
-   const stripe = new Stripe(process.env.SECRET_KEY as string)
+   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
    const session = await stripe.checkout.sessions.create({
       line_items: [
          {
@@ -136,7 +135,7 @@ export const createPaymet = async (req: Request, res: Response, next: NextFuncti
                name: "your order ",
                description: "this is description discribed you order",
             },
-            unit_amount: order?.totalPrice,
+            unit_amount: order?.totalPrice * 100,
             },
             quantity: 1,
          },
@@ -153,10 +152,23 @@ export const createPaymet = async (req: Request, res: Response, next: NextFuncti
       mode: 'payment',
       customer_email:req.user?.email,
       client_reference_id:order?._id,
-      success_url: 'https://example.com/success',
-      cancel_url: 'https://example.com/cancel',
+      success_url: `${req.protocol}://${req.get('host')}/order/orders`,
+      cancel_url: `${req.protocol}://${req.get('host')}/order/order/${req.params.orderId}`,
    });
 
    res.status(200).json({data: session})
+}
+
+export const webHook = async (req: Request, res: Response) => {
+   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string)
+   const sig = req.headers['stripe-signature'];
+   let event;
+   try {
+      event = stripe.webhooks.constructEvent(req.body, sig as string | string[], "webhokekey");
+      console.log(event)
+   } catch (err) {
+      res.status(400).send(`Webhook Error: ${err}`);
+      return;
+   }
 }
 

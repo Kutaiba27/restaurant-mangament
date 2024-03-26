@@ -1,12 +1,12 @@
-import {Response, Request, NextFunction} from "express"
+import {Response, Request} from "express"
 import {OrderDoc, OrderModel} from "../model/order.model";
 import {CustomerDoc, CustomerModel} from "../model/customer.model";
 import {CartDoc, CartModel} from "../model/cart.model";
+import asyncHandler from "express-async-handler";
+import { ApiError } from "../utility/error/apierror";
 
-export const createOrder = async (req:Request,res:Response,)=>{
-   try{
+export const createOrder = asyncHandler( async (req:Request,res:Response)=>{
       const cart:CartDoc = await CartModel.findById(req.params.cartId) as CartDoc
-      console.log(cart)
       const order:OrderDoc= await OrderModel.create({
          cart:cart,
          totalPrice:cart.totalPrice,
@@ -16,34 +16,22 @@ export const createOrder = async (req:Request,res:Response,)=>{
          paymentResponse:"dfluat",
          vindorId:cart.vindorId
       })
-      console.log(req.user)
       const customer:CustomerDoc = await CustomerModel.findById(req.user?._id) as CustomerDoc;
-      console.log("after create order",customer)
       customer.orders = [...customer.orders,order]
       await customer.save()
       res.status(200).json({data: order})
-   }catch (e) {
-      res.status(400).json(e)
-   }
-}
-export const getOrders = async (req:Request,res:Response,)=>{
-   try{
+})
+
+export const getOrders = asyncHandler(async (req:Request,res:Response)=>{
       const customer:CustomerDoc |null = await CustomerModel.findOne({_id:req.user?._id}).populate('orders')
-      console.log(customer)
-      if(!customer) return res.status(404).json({message:"user not found"})
-      console.log(customer)
+      if(!customer) throw new ApiError("Customer not found", 404)
       const orders:OrderDoc[] = customer?.orders;
       res.status(200).json({data:orders})
-   }catch (e) {
-      res.status(400).json({e})
-   }
-}
-export const getOrderById = async (req:Request,res:Response,next: NextFunction)=>{
-   try{
-      const order:OrderDoc | null = await OrderModel.findById(req.params.id)
-      if(!order) return res.status(404).json({message:"order with this id not found"})
-      res.status(200).json({data: order})
-   }catch (e) {
-      next(e)
-   }
-}
+})
+
+
+export const getOrderById = asyncHandler(async (req:Request,res:Response)=>{
+   const order:OrderDoc | null = await OrderModel.findById(req.params.id)
+   if(!order) throw new ApiError( "Order not founddddd",404);
+   res.status(200).json({data: order})
+})

@@ -2,7 +2,6 @@ import {IsBoolean, IsDate, IsEmail,IsOptional, IsNumber, IsString, Length} from 
 
 export class CreateCustomerDto {
 
-   
    @IsEmail()
    email:string;
 
@@ -45,23 +44,43 @@ export class CreateCustomerDto {
    @IsString()
    @IsOptional()
    salt: string;
+}
+
+export class EditCustomerDto extends CreateCustomerDto{
+   @IsOptional()   
+   @IsEmail()
+   email:string;
+
+   @IsOptional()
+   @Length(8,26)
+   password:string;
+
+   @IsOptional()
+   @IsString()
+   phone:string;
+
+   @IsOptional()
+   @IsString()
+   firstName:string;
+
+   @IsOptional()
+   @IsString()
+   lastName:string;
 
 }
 
-export class EditCustomerDto extends CreateCustomerDto{}
 
+export class LoginCustomer {
+   @IsEmail()
+   email:string;
+   
+   @IsString()
+   @Length(8,26)
+   password:string;
+}
 export interface CustomerPayload {
    _id: string;
    email: string;
    firstName: string;
    verified: boolean
-}
-
-export class LoginCustomer {
-   @IsEmail()
-   email:string;
-
-   @IsString()
-   @Length(8,26)
-   password:string;
 }

@@ -1,0 +1,17 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CustomerRouter = void 0;
+const express_1 = require("express");
+const cutomer_controller_1 = require("../controllers/cutomer.controller");
+const auth_middleware_1 = require("../middlewares/auth.middleware");
+const router = (0, express_1.Router)();
+exports.CustomerRouter = router;
+router.post('/singin', cutomer_controller_1.customerSingIn);
+router.post('/login', cutomer_controller_1.customerLogIn);
+router.post('/web-hook', cutomer_controller_1.webHook);
+router.use(auth_middleware_1.Authorization);
+router.patch('/verify', cutomer_controller_1.customerVerify);
+router.get('/otp', cutomer_controller_1.requestOpt);
+router.get('/profile', cutomer_controller_1.getCustomerProfile);
+router.patch('/profile', cutomer_controller_1.editCusomerProfile);
+router.post('/create-payment/:orderId', cutomer_controller_1.createPaymet);

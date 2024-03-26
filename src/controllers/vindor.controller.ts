@@ -9,16 +9,20 @@ import {UpdateVindorDto, VindorLoginDto} from "../dto/vindor.dto"
 import {VindorModel, VindorDoc} from "../model/vindor.model";
 import {OrderDoc, OrderModel} from "../model/order.model";
 import { uploadMultiblImage, uploadSinglImage } from "../middlewares/multer.middleware";
+import { plainToInstance } from "class-transformer";
+import { ValidationError, validate } from "class-validator";
+import { ApiError } from "../utility/error/apierror";
+import validationDto from "../utility/validationDto";
 
 export const uploudImageSingle = uploadSinglImage('image')
 export const uploudImageMultibl = uploadMultiblImage([{name:'mainImage',maxCount:1},{name:"images",maxCount:5}])
 
 export const LoginVindor = async(req: Request, res: Response, next: NextFunction) => {
    try{
-      const { email, password } = <VindorLoginDto>req.body
-      const existingVindor = await findVindor('', email)
+      const vindorInfo = await validationDto<VindorLoginDto>(VindorLoginDto,req.body)
+      const existingVindor = await findVindor('', vindorInfo.email)
       if (existingVindor) {
-         const virfyPassword = VirfyPassword(password, existingVindor.password)
+         const virfyPassword = VirfyPassword(vindorInfo.password, existingVindor.password)
          if (virfyPassword) {
             const token: string = GeneratSignature({
                _id: existingVindor._id,
@@ -40,16 +44,24 @@ export const LoginVindor = async(req: Request, res: Response, next: NextFunction
 }
 
 export const GetVindorProfile =async (req:Request, res:Response, next:NextFunction)=>{
+   try{
       const vendor:VindorDoc | null = await VindorModel.findById(req.user?._id)
       if(!vendor){
-         throw new Error("there are not vindor whit this id")
+         throw new ApiError("there are not vindor whit this id",404)
       }
       res.status(200).json({data: vendor})
+   }catch(e){
+      next(e)
+   }
 }
 
 export const UpdateVindorProfile =async (req:Request, res:Response, next:NextFunction)=>{
-      const vindorDate: UpdateVindorDto = <UpdateVindorDto>req.body
-   console.log(vindorDate)
+      const vindorDate = <UpdateVindorDto>req.body
+      const instatn = plainToInstance(UpdateVindorDto,vindorDate)
+      const inputError: ValidationError[] = await validate(instatn, { validationError: { target: true } })
+      if (inputError.length > 0) {
+         return res.status(400).json({ message: inputError })
+      }
       const vindor  = await VindorModel.updateOne(
          {_id: req.user?._id},
          vindorDate,
@@ -73,38 +85,61 @@ export const UpdateVindorServes = async (req:Request, res:Response, next:NextFun
 }
 
 export const addFood = async (req: Request, res: Response, next: NextFunction)=>{
-      const foodInput = <CreateFood>req.body
+   try{
+      const foodInfo = await validationDto<CreateFood>(CreateFood,req.body)
       const vendor:VindorDoc = await findVindor(req.user?._id)
       if(!vendor) return res.status(404).json({message: "vendor not found"})
       // const files = req.files as [Express.Multer.File]
       // const images: string[] = files.map((file:Express.Multer.File) => file.filename as string)
-      foodInput.images = req.body.images
-      const newFood: FoodDoc = await FoodModel.create(foodInput)
+      foodInfo.images = req.body.images
+      const newFood: FoodDoc = await FoodModel.create(foodInfo)
       vendor.foods.push(newFood)
       await vendor.save();
       res.status(200).json({newFood})
+   }catch(e){
+      next(e)
+   }
+
 }
 
 export const getFood = async (req: Request, res: Response, next: NextFunction) => {
-   const food = await FoodModel.findById(req.params.id)
-   res.status(200).json({food})
+   try {
+      const food = await FoodModel.findById(req.params.id)
+      if(!food) throw new ApiError("food not found",404)
+      res.status(200).json({food})
+   } catch (error) {
+      next(error)
+   }
 }
 
 export const getFoods = async (req: Request, res: Response, next:NextFunction) => {
-   const foods=await FoodModel.find()
-   res.status(200).json({foods})
+   try {
+      const foods = await FoodModel.find()
+      if(foods) throw new ApiError("foods not found",404)
+      res.status(200).json({foods})
+   } catch (error) {
+      next(error)
+   }
 }
 //-----------------------------------Order---------------------------//
 export const getCurrentOrders = async (req: Request, res: Response, next: NextFunction)=>{
-   const order:OrderDoc[] = await OrderModel.find({vindorId:req.user?._id as string})
-   if(order.length == 0) return res.status(404).json({message:"there are no order"})
-   res.status(200).json({data:order})
+   try {
+      const order:OrderDoc[] = await OrderModel.find({vindorId:req.user?._id as string})
+      if(order.length == 0) return res.status(404).json({message:"there are no order"})
+      res.status(200).json({data:order})
+   }catch (error) {
+      next(error)
+   }
 }
 
 export const getOrderDetail = async (req: Request, res: Response, next: NextFunction)=>{
-   const order:OrderDoc | null = await OrderModel.findById(req.params.id)
-   if(!order) return res.status(404).json({message:"there are no order with this id"})
-   res.status(200).json({data:order})
+   try{
+      const order:OrderDoc | null = await OrderModel.findById(req.params.id)
+      if(!order) return res.status(404).json({message:"there are no order with this id"})
+      res.status(200).json({data:order})
+   }catch (error) {
+      next(error)
+   }
 }
 
 export const processOrder = async (req: Request, res: Response, next: NextFunction)=>{
