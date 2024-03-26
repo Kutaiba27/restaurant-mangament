@@ -14,7 +14,7 @@ import {CustomerRouter} from "./routes/cutomer.router";
 import {CartRouter} from "./routes/cart.router";
 import { OrderRouter } from './routes/order.router'
 
-dotenv.config({path: 'config.env'})
+dotenv.config({path: '.env'})
 
 const app:Express = express()
 app.use(morgan("dev"))
