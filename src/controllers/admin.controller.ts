@@ -5,6 +5,7 @@ import { GeneratePassword, GenerateSult } from "../utility/PasswordUtility"
 import {CustomerDoc, CustomerModel} from "../model/customer.model";
 import {FoodDoc, FoodModel} from "../model/food.model";
 import { CreateVindorDto } from "../dto/vindor.dto";
+import validationDto from "../utility/validationDto";
 
 
 export const findVindor = async (id: string | undefined, email?: string) => {
@@ -23,37 +24,29 @@ export const findFood = async (id:string):Promise<FoodDoc>=>{
    return await FoodModel.findById(id) as FoodDoc
 }
 
-   export const createVinder = async (req: Request, res: Response, next: NextFunction) => {
-   const { name, ownerName, email, password, phone, foodType, pincode } = <CreateVindorDto>req.body
-   const vindor:VindorDoc = await findVindor('',email)
-   if (vindor) {
-      return res.json({message:"the vindor is existing wiht the email"})
+export const createVinder = async (req: Request, res: Response) => {
+   try{
+      const vindorInfo:CreateVindorDto = await validationDto<CreateVindorDto>(CreateVindorDto,req.body)
+      const sultGenerated = await GenerateSult()
+      const passwordHashed = await GeneratePassword(vindorInfo.password, sultGenerated)
+      vindorInfo.password = passwordHashed
+      const createVindor = await VindorModel.create(vindorInfo)
+      return res.json({ Vindor: createVindor })
+   }catch(e){
+      res.status(400).json({e})
    }
-   const sultGenerated = await GenerateSult()
-   const passwordHashed = await GeneratePassword(password, sultGenerated)
-   const createVindor = await VindorModel.create({
-      name: name,
-      email: email,
-      ownerName: ownerName,
-      password: passwordHashed,
-      phone: phone,
-      foodType: foodType,
-      pincode: pincode,
-      salt: 'vcvcvc,',
-      coverImage: [],
-      serviceAvailable: false,
-      rating:0,
-      foods: []
-   })
-   return res.json({ Vindor: createVindor })
+
 }
 
 export const getVinders = async (req: Request, res: Response, next: NextFunction) => {
-   const vindors = await VindorModel.find()
-   if (vindors) {
-      return res.json({vindors})
+   try {
+      const vindors = await VindorModel.find()
+      if (vindors) {
+         return res.json({vindors})
+      }
+   } catch (error) {
+      return res.json({message:"there are not vindors"})
    }
-   return res.json({message:"there are not vindors"})
 }
 
 export const getVindor = async (req: Request, res: Response, next: NextFunction) => {
